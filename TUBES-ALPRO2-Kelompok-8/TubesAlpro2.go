@@ -10,10 +10,10 @@ import (
 // --- Variabel Global ---
 // Menggunakan array statis (bukan slice) untuk menyimpan data utama seperti pengguna, teman, status, dan komentar.
 // Variabel global hanya digunakan untuk array utama seperti `pengguna`, yang memuat semua data pengguna.
-const MAKS_PENGGUNA = 100
-const MAKS_TEMAN = 50
-const MAKS_STATUS = 50
-const MAKS_KOMENTAR = 50
+const MAKS_PENGGUNA = 20
+const MAKS_TEMAN = 20
+const MAKS_STATUS = 20
+const MAKS_KOMENTAR = 20
 
 type Pengguna struct {
 	NamaPengguna string
@@ -24,6 +24,7 @@ type Pengguna struct {
 	Komentar     [MAKS_STATUS][MAKS_KOMENTAR]string
 	JumlahTeman  int
 	JumlahStatus int
+	
 }
 
 var pengguna [MAKS_PENGGUNA]Pengguna
@@ -88,10 +89,18 @@ func insertionSortTeman(teman []string, jumlah int, urutan string) {
 	for i := 1; i < jumlah; i++ {
 		kunci := teman[i] // Menyimpan nilai elemen saat ini sebagai kunci.
 		j := i - 1
-		// Memindahkan elemen yang lebih besar (untuk ascending) atau lebih kecil (untuk descending) ke posisi berikutnya.
-		for j >= 0 && ((urutan == "asc" && teman[j] > kunci) || (urutan == "desc" && teman[j] < kunci)) {
-			teman[j+1] = teman[j]
-			j--
+		if urutan == "asc" {
+			// Memindahkan elemen yang lebih besar ke posisi berikutnya untuk ascending.
+			for j >= 0 && teman[j] > kunci {
+				teman[j+1] = teman[j]
+				j--
+			}
+		} else if urutan == "desc" {
+			// Memindahkan elemen yang lebih kecil ke posisi berikutnya untuk descending.
+			for j >= 0 && teman[j] < kunci {
+				teman[j+1] = teman[j]
+				j--
+			}
 		}
 		teman[j+1] = kunci // Menempatkan kunci pada posisi yang tepat.
 	}
@@ -407,16 +416,16 @@ func lihatBeranda() {
 	// Loop melalui semua pengguna
 	for i := 0; i < jumlahPengguna; i++ {
 		// Menampilkan nama pengguna
-		fmt.Printf("%s:\n", pengguna[i].NamaPengguna)
+		fmt.Println(pengguna[i].NamaPengguna + ":")
 		// Loop melalui semua status pengguna
 		for j := 0; j < pengguna[i].JumlahStatus; j++ {
 			// Menampilkan status pengguna
-			fmt.Printf("  - %s\n", pengguna[i].Status[j])
+			fmt.Println("  - " + pengguna[i].Status[j])
 			// Loop melalui semua komentar pada status
 			for k := 0; k < MAKS_KOMENTAR; k++ {
 				// Memeriksa dan menampilkan komentar jika ada
 				if pengguna[i].Komentar[j][k] != "" {
-					fmt.Printf("    * %s\n", pengguna[i].Komentar[j][k])
+					fmt.Println("    * " + pengguna[i].Komentar[j][k])
 				}
 			}
 		}
@@ -444,7 +453,7 @@ func lihatPengguna() {
 	// Loop melalui semua pengguna
 	for i := 0; i < jumlahPengguna; i++ {
 		// Menampilkan nama pengguna
-		fmt.Printf("%d. %s\n", i+1, pengguna[i].NamaPengguna)
+		fmt.Println(i+1, ".", pengguna[i].NamaPengguna)
 	}
 }
 
@@ -652,6 +661,54 @@ func postStatus() {
 	fmt.Println("Status berhasil diunggah!")
 }
 
+// Fungsi untuk mencari status pengguna menggunakan algoritma binary search
+// Catatan: Algoritma binary search mengharuskan data diurutkan terlebih dahulu.
+// Parameter:
+// - namaPengguna: string yang berisi nama pengguna yang ingin dicari statusnya.
+// - kataKunci: string yang berisi kata kunci yang ingin dicari dalam status.
+func cariStatusBinarySearch() {
+	// Meminta input untuk parameter yang diperlukan
+	var namaPengguna string
+	var kataKunci string
+	fmt.Print("Masukkan nama pengguna: ")
+	fmt.Scanln(&namaPengguna)
+	fmt.Print("Masukkan kata kunci: ")
+	fmt.Scanln(&kataKunci)
+
+	// Mencari indeks pengguna berdasarkan nama pengguna
+	indeks := cariIndeksPengguna(namaPengguna)
+	if indeks == -1 {
+		fmt.Println("Pengguna tidak ditemukan.")
+		return
+	}
+
+	// Mengurutkan status pengguna sebelum melakukan binary search
+	insertionSortTeman(pengguna[indeks].Status[:pengguna[indeks].JumlahStatus], pengguna[indeks].JumlahStatus, "asc")
+
+	// Melakukan binary search untuk mencari status yang mengandung kata kunci
+	low, high := 0, pengguna[indeks].JumlahStatus-1
+	statusDitemukan := false
+	for low <= high {
+		mid := (low + high) / 2
+		if strings.Contains(pengguna[indeks].Status[mid], kataKunci) {
+			fmt.Printf("Status ditemukan pada indeks %d: %s\n", mid, pengguna[indeks].Status[mid])
+			statusDitemukan = true
+			fmt.Println("Status:", pengguna[indeks].Status[mid]) // Menampilkan status setelah ditemukan
+			break
+		} else if pengguna[indeks].Status[mid] < kataKunci {
+			low = mid + 1
+		} else {
+			high = mid - 1
+		}
+	}
+
+	if !statusDitemukan {
+		fmt.Println("Tidak ada status yang mengandung kata kunci tersebut.")
+	}
+}
+
+
+
 // Fungsi untuk mengedit status pengguna
 // Parameter:
 // - namaPengguna: string yang berisi nama pengguna yang ingin mengedit status.
@@ -796,7 +853,8 @@ func menu() {
 		fmt.Println("14. Edit Komentar")
 		fmt.Println("15. Hapus Komentar")
 		fmt.Println("16. Lihat Beranda")
-		fmt.Println("17. Keluar")
+		fmt.Println("17. Lihat Beranda")
+		fmt.Println("18. Keluar")
 		fmt.Print("Pilih opsi: ")
 
 		var pilihan int
@@ -836,6 +894,8 @@ func menu() {
 		case 16:
 			lihatBeranda() // Read
 		case 17:
+			cariStatusBinarySearch() //Read
+		case 18: 
 			fmt.Println("Keluar...")
 			return
 		default:

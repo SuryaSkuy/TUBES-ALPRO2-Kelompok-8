@@ -7,360 +7,844 @@ import (
 	"strings"
 )
 
-// --- Global Variables ---
+// --- Variabel Global ---
 // Menggunakan array statis (bukan slice) untuk menyimpan data utama seperti pengguna, teman, status, dan komentar.
-// Variabel global hanya digunakan untuk array utama seperti `users`, yang memuat semua data pengguna.
-const MAX_USERS = 100
-const MAX_FRIENDS = 50
-const MAX_STATUSES = 50
-const MAX_COMMENTS = 50
+// Variabel global hanya digunakan untuk array utama seperti `pengguna`, yang memuat semua data pengguna.
+const MAKS_PENGGUNA = 100
+const MAKS_TEMAN = 50
+const MAKS_STATUS = 50
+const MAKS_KOMENTAR = 50
 
-type User struct {
-	Username    string
-	Password    string
-	Profile     string
-	Friends     [MAX_FRIENDS]string
-	Statuses    [MAX_STATUSES]string
-	Comments    [MAX_STATUSES][MAX_COMMENTS]string
-	FriendCount int
-	StatusCount int
+type Pengguna struct {
+	NamaPengguna string
+	KataSandi    string
+	Profil       string
+	Teman        [MAKS_TEMAN]string
+	Status       [MAKS_STATUS]string
+	Komentar     [MAKS_STATUS][MAKS_KOMENTAR]string
+	JumlahTeman  int
+	JumlahStatus int
 }
 
-var users [MAX_USERS]User
-var userCount int
-var loggedInIndex = -1
+var pengguna [MAKS_PENGGUNA]Pengguna
+var jumlahPengguna int
+var indeksMasuk = -1
 
-// Utility Functions
-// `findUserIndex` menggunakan algoritma pencarian sequential untuk mencari pengguna berdasarkan username.
+// Fungsi Utilitas
+// `cariIndeksPengguna` menggunakan algoritma pencarian sequential untuk mencari pengguna berdasarkan nama pengguna.
 // Fungsi ini modular dan digunakan di beberapa bagian aplikasi.
-func findUserIndex(username string) int {
-	// Loop iterasi linear untuk mencari indeks pengguna berdasarkan username.
-	for i := 0; i < userCount; i++ {
-		if users[i].Username == username {
+func cariIndeksPengguna(namaPengguna string) int {
+	// Loop iterasi linear untuk mencari indeks pengguna berdasarkan nama pengguna.
+	for i := 0; i < jumlahPengguna; i++ {
+		if pengguna[i].NamaPengguna == namaPengguna {
 			return i
 		}
 	}
 	return -1
 }
 
-func login(username, password string) int {
-	for i := 0; i < userCount; i++ {
-		if users[i].Username == username && users[i].Password == password {
-			return i
+// Fungsi `masuk` digunakan untuk memverifikasi kredensial pengguna saat masuk.
+// Parameter:
+// - namaPengguna: string yang berisi nama pengguna yang ingin masuk.
+// - kataSandi: string yang berisi kata sandi pengguna yang ingin masuk.
+// Mengembalikan indeks pengguna jika kredensial valid, atau -1 jika tidak valid.
+func masuk(namaPengguna, kataSandi string) int {
+	for i := 0; i < jumlahPengguna; i++ {
+		// Memeriksa apakah nama pengguna dan kata sandi cocok dengan data yang ada.
+		if pengguna[i].NamaPengguna == namaPengguna && pengguna[i].KataSandi == kataSandi {
+			return i // Mengembalikan indeks pengguna jika cocok.
 		}
 	}
-	return -1
+	return -1 // Mengembalikan -1 jika tidak ada kecocokan.
 }
 
-// Sorting Functions
-// `selectionSortUsersByUsername` menggunakan algoritma selection sort untuk mengurutkan data pengguna.
+// Fungsi Pengurutan
+// `selectionSortPenggunaByNamaPengguna` menggunakan algoritma selection sort untuk mengurutkan data pengguna.
 // Mendukung urutan ascending dan descending sesuai parameter.
-func selectionSortUsersByUsername(order string) {
-	for i := 0; i < userCount-1; i++ {
+func selectionSortPenggunaByNamaPengguna(urutan string) {
+	for i := 0; i < jumlahPengguna-1; i++ {
 		idx := i
-		for j := i + 1; j < userCount; j++ {
-			// Menggunakan kondisi untuk menentukan urutan berdasarkan parameter `order`.
-			if (order == "asc" && users[j].Username < users[idx].Username) || (order == "desc" && users[j].Username > users[idx].Username) {
+		for j := i + 1; j < jumlahPengguna; j++ {
+			// Menggunakan kondisi untuk menentukan urutan berdasarkan parameter `urutan`.
+			if (urutan == "asc" && pengguna[j].NamaPengguna < pengguna[idx].NamaPengguna) || (urutan == "desc" && pengguna[j].NamaPengguna > pengguna[idx].NamaPengguna) {
 				idx = j
 			}
 		}
 		if idx != i {
-			// Swap elemen jika diperlukan.
-			users[i], users[idx] = users[idx], users[i]
+			// Tukar elemen jika diperlukan.
+			temp := pengguna[i]
+			pengguna[i] = pengguna[idx]
+			pengguna[idx] = temp
 		}
 	}
 }
 
-// Core Functions
-// --- Modular Subprograms ---
+// Fungsi `insertionSortTeman` mengurutkan array teman menggunakan algoritma Insertion Sort.
+// Parameter:
+// - teman: array string yang berisi nama-nama teman yang akan diurutkan.
+// - jumlah: jumlah elemen dalam array teman yang akan diurutkan.
+// - urutan: string yang menentukan urutan pengurutan, bisa "asc" untuk ascending atau "desc" untuk descending.
+func insertionSortTeman(teman []string, jumlah int, urutan string) {
+	for i := 1; i < jumlah; i++ {
+		kunci := teman[i] // Menyimpan nilai elemen saat ini sebagai kunci.
+		j := i - 1
+		// Memindahkan elemen yang lebih besar (untuk ascending) atau lebih kecil (untuk descending) ke posisi berikutnya.
+		for j >= 0 && ((urutan == "asc" && teman[j] > kunci) || (urutan == "desc" && teman[j] < kunci)) {
+			teman[j+1] = teman[j]
+			j--
+		}
+		teman[j+1] = kunci // Menempatkan kunci pada posisi yang tepat.
+	}
+}
+
+// Fungsi Inti
+// --- Subprogram Modular ---
 // Setiap fitur diimplementasikan dalam fungsi modular dengan parameter yang jelas.
-// Contoh: Fungsi `register` menangani proses registrasi pengguna baru.
-func register() {
-	if userCount >= MAX_USERS {
-		fmt.Println("User limit reached.")
+// Contoh: Fungsi `daftar` menangani proses registrasi pengguna baru.
+func daftar() {
+	if jumlahPengguna >= MAKS_PENGGUNA {
+		fmt.Println("Batas pengguna tercapai.")
 		return
 	}
 
-	// Input username dan password.
-	var username, password string
-	fmt.Print("Enter username: ")
-	fmt.Scanln(&username)
-	fmt.Print("Enter password: ")
-	fmt.Scanln(&password)
+	// Input nama pengguna dan kata sandi.
+	var namaPengguna, kataSandi string
+	fmt.Print("Masukkan nama pengguna: ")
+	fmt.Scanln(&namaPengguna)
+	fmt.Print("Masukkan kata sandi: ")
+	fmt.Scanln(&kataSandi)
 
-	// Validasi apakah username sudah ada dengan memanfaatkan `findUserIndex`.
-	if findUserIndex(username) != -1 {
-		fmt.Println("Username already exists.")
+	// Validasi apakah nama pengguna sudah ada dengan memanfaatkan `cariIndeksPengguna`.
+	if cariIndeksPengguna(namaPengguna) != -1 {
+		fmt.Println("Nama pengguna sudah ada.")
 		return
 	}
 
-	// Menambahkan pengguna baru ke array `users`.
-	users[userCount] = User{Username: username, Password: password}
-	userCount++
-	fmt.Println("Registration successful!")
+	// Menambahkan pengguna baru ke array `pengguna`.
+	pengguna[jumlahPengguna] = Pengguna{NamaPengguna: namaPengguna, KataSandi: kataSandi}
+	jumlahPengguna++
+	fmt.Println("Registrasi berhasil!")
 }
 
-func loginHandler() {
-	if loggedInIndex != -1 {
-		fmt.Println("Already logged in.")
+// Fungsi `handlerMasuk` digunakan untuk menangani proses masuk pengguna.
+// Fungsi ini memverifikasi kredensial pengguna dan mengatur indeks pengguna yang masuk.
+func handlerMasuk() {
+	// Memeriksa apakah sudah ada pengguna yang masuk.
+	if indeksMasuk != -1 {
+		fmt.Println("Sudah masuk.")
 		return
 	}
 
-	var username, password string
-	fmt.Print("Enter username: ")
-	fmt.Scanln(&username)
-	fmt.Print("Enter password: ")
-	fmt.Scanln(&password)
+	// Meminta input nama pengguna dan kata sandi.
+	var namaPengguna, kataSandi string
+	fmt.Print("Masukkan nama pengguna: ")
+	fmt.Scanln(&namaPengguna)
+	fmt.Print("Masukkan kata sandi: ")
+	fmt.Scanln(&kataSandi)
 
-	index := login(username, password)
-	if index == -1 {
-		fmt.Println("Invalid username or password.")
+	// Memverifikasi kredensial pengguna.
+	indeks := masuk(namaPengguna, kataSandi)
+	if indeks == -1 {
+		fmt.Println("Nama pengguna atau kata sandi salah.")
 		return
 	}
 
-	loggedInIndex = index
-	fmt.Printf("Welcome, %s!\n", users[loggedInIndex].Username)
+	// Mengatur indeks pengguna yang masuk.
+	indeksMasuk = indeks
+	fmt.Println("Selamat datang,", pengguna[indeksMasuk].NamaPengguna, "!")
 }
 
-func logout() {
-	if loggedInIndex == -1 {
-		fmt.Println("No user is logged in.")
+// Fungsi `keluar` digunakan untuk menangani proses keluar pengguna.
+// Fungsi ini memeriksa apakah ada pengguna yang masuk, jika tidak ada maka akan menampilkan pesan kesalahan.
+// Jika ada pengguna yang masuk, maka akan menampilkan pesan selamat tinggal dan mengatur indeksMasuk menjadi -1.
+func keluar() {
+	if indeksMasuk == -1 {
+		fmt.Println("Tidak ada pengguna yang masuk.")
 		return
 	}
 
-	fmt.Printf("Goodbye, %s!\n", users[loggedInIndex].Username)
-	loggedInIndex = -1
+	fmt.Println("Selamat tinggal,", pengguna[indeksMasuk].NamaPengguna, "!")
+	indeksMasuk = -1
 }
 
-func updateProfile() {
-	if loggedInIndex == -1 {
-		fmt.Println("Please login first.")
+// Fungsi `perbaruiProfil` digunakan untuk memperbarui informasi profil pengguna yang sedang masuk.
+func perbaruiProfil() {
+	// Memeriksa apakah ada pengguna yang sudah masuk.
+	if indeksMasuk == -1 {
+		fmt.Println("Silakan masuk terlebih dahulu.")
 		return
 	}
 
-	fmt.Print("Enter new profile information: ")
-	reader := bufio.NewReader(os.Stdin)
-	profile, _ := reader.ReadString('\n')
-	users[loggedInIndex].Profile = strings.TrimSpace(profile)
-	fmt.Println("Profile updated!")
+	// Meminta input informasi profil baru dari pengguna.
+	fmt.Print("Masukkan informasi profil baru: ")
+	pembaca := bufio.NewReader(os.Stdin)
+	profil, err := pembaca.ReadString('\n')
+	if err != nil {
+		// Menangani kesalahan saat membaca input.
+		fmt.Println("Terjadi kesalahan saat membaca input.")
+		return
+	}
+	// Memperbarui profil pengguna yang sedang masuk dengan informasi baru.
+	pengguna[indeksMasuk].Profil = strings.TrimSpace(profil)
+	fmt.Println("Profil diperbarui!")
 }
 
-func addFriend() {
-	if loggedInIndex == -1 {
-		fmt.Println("Please login first.")
+// Fungsi `tambahTeman` digunakan untuk menambahkan teman baru ke daftar teman pengguna yang sedang masuk.
+func tambahTeman() {
+	// Memeriksa apakah ada pengguna yang sudah masuk.
+	if indeksMasuk == -1 {
+		fmt.Println("Silakan masuk terlebih dahulu.")
 		return
 	}
 
-	if users[loggedInIndex].FriendCount >= MAX_FRIENDS {
-		fmt.Println("Friend list is full.")
+	// Memeriksa apakah daftar teman sudah penuh.
+	if pengguna[indeksMasuk].JumlahTeman >= MAKS_TEMAN {
+		fmt.Println("Daftar teman penuh.")
 		return
 	}
 
-	var friendUsername string
-	fmt.Print("Enter the username of the friend to add: ")
-	fmt.Scanln(&friendUsername)
+	// Meminta input nama pengguna teman yang ingin ditambahkan.
+	var namaTeman string
+	fmt.Print("Masukkan nama pengguna teman yang ingin ditambahkan: ")
+	fmt.Scanln(&namaTeman)
 
-	friendIndex := findUserIndex(friendUsername)
-	if friendIndex == -1 {
-		fmt.Println("User not found.")
+	// Mencari indeks pengguna teman berdasarkan nama pengguna.
+	indeksTeman := cariIndeksPengguna(namaTeman)
+	if indeksTeman == -1 {
+		fmt.Println("Pengguna tidak ditemukan.")
 		return
 	}
 
-	if friendUsername == users[loggedInIndex].Username {
-		fmt.Println("You cannot add yourself as a friend.")
+	// Memeriksa apakah pengguna mencoba menambahkan dirinya sendiri sebagai teman.
+	if namaTeman == pengguna[indeksMasuk].NamaPengguna {
+		fmt.Println("Anda tidak dapat menambahkan diri sendiri sebagai teman.")
 		return
 	}
 
-	for i := 0; i < users[loggedInIndex].FriendCount; i++ {
-		if users[loggedInIndex].Friends[i] == friendUsername {
-			fmt.Println("This user is already your friend.")
+	// Memeriksa apakah teman sudah ada dalam daftar teman.
+	for i := 0; i < pengguna[indeksMasuk].JumlahTeman; i++ {
+		if pengguna[indeksMasuk].Teman[i] == namaTeman {
+			fmt.Println("Pengguna ini sudah menjadi teman Anda.")
 			return
 		}
 	}
 
-	users[loggedInIndex].Friends[users[loggedInIndex].FriendCount] = friendUsername
-	users[loggedInIndex].FriendCount++
-	fmt.Println("Friend added successfully!")
+	// Menambahkan teman baru ke daftar teman pengguna yang sedang masuk.
+	pengguna[indeksMasuk].Teman[pengguna[indeksMasuk].JumlahTeman] = namaTeman
+	pengguna[indeksMasuk].JumlahTeman++
+	fmt.Println("Teman berhasil ditambahkan!")
 }
 
-func postStatus() {
-	if loggedInIndex == -1 {
-		fmt.Println("Please login first.")
+// Fungsi `hapusTeman` digunakan untuk menghapus teman dari daftar teman pengguna yang sedang masuk.
+func hapusTeman() {
+	// Memeriksa apakah ada pengguna yang sudah masuk.
+	if indeksMasuk == -1 {
+		fmt.Println("Silakan masuk terlebih dahulu.")
 		return
 	}
 
-	if users[loggedInIndex].StatusCount >= MAX_STATUSES {
-		fmt.Println("Status list is full.")
+	// Meminta input nama pengguna teman yang ingin dihapus.
+	var namaTeman string
+	fmt.Print("Masukkan nama pengguna teman yang ingin dihapus: ")
+	fmt.Scanln(&namaTeman)
+
+	// Mencari indeks teman dalam daftar teman pengguna yang sedang masuk.
+	indeksTeman := -1
+	for i := 0; i < pengguna[indeksMasuk].JumlahTeman; i++ {
+		if pengguna[indeksMasuk].Teman[i] == namaTeman {
+			indeksTeman = i
+			break
+		}
+	}
+
+	// Memeriksa apakah teman ditemukan dalam daftar teman.
+	if indeksTeman == -1 {
+		fmt.Println("Teman tidak ditemukan dalam daftar teman Anda.")
 		return
 	}
 
-	fmt.Print("Enter your status: ")
-	reader := bufio.NewReader(os.Stdin)
-	status, _ := reader.ReadString('\n')
-	status = strings.TrimSpace(status)
-	users[loggedInIndex].Statuses[users[loggedInIndex].StatusCount] = status
-	users[loggedInIndex].StatusCount++
-	fmt.Println("Status posted!")
+	// Menggeser teman ke kiri untuk menghapus teman pada indeks yang diberikan.
+	for i := indeksTeman; i < pengguna[indeksMasuk].JumlahTeman-1; i++ {
+		pengguna[indeksMasuk].Teman[i] = pengguna[indeksMasuk].Teman[i+1]
+	}
+	// Mengosongkan teman terakhir setelah penggeseran.
+	pengguna[indeksMasuk].Teman[pengguna[indeksMasuk].JumlahTeman-1] = ""
+	// Mengurangi jumlah teman pengguna.
+	pengguna[indeksMasuk].JumlahTeman--
+
+	fmt.Println("Teman berhasil dihapus!")
 }
 
-func commentOnStatus() {
-	if loggedInIndex == -1 {
-		fmt.Println("Please login first.")
+// Fungsi `komentarPadaStatus` digunakan untuk menambahkan komentar pada status pengguna lain.
+func komentarPadaStatus() {
+	// Memeriksa apakah ada pengguna yang sudah masuk.
+	if indeksMasuk == -1 {
+		fmt.Println("Silakan masuk terlebih dahulu.")
 		return
 	}
 
-	var username string
-	fmt.Print("Enter the username of the user whose status you want to comment on: ")
-	fmt.Scanln(&username)
+	// Meminta input nama pengguna yang statusnya ingin dikomentari.
+	var namaPengguna string
+	fmt.Print("Masukkan nama pengguna yang statusnya ingin Anda komentari: ")
+	fmt.Scanln(&namaPengguna)
 
-	userIndex := findUserIndex(username)
-	if userIndex == -1 {
-		fmt.Println("User not found.")
+	// Mencari indeks pengguna berdasarkan nama pengguna.
+	indeksPengguna := cariIndeksPengguna(namaPengguna)
+	if indeksPengguna == -1 {
+		fmt.Println("Pengguna tidak ditemukan.")
 		return
 	}
 
-	if users[userIndex].StatusCount == 0 {
-		fmt.Println("This user has no statuses.")
+	// Memeriksa apakah pengguna memiliki status.
+	if pengguna[indeksPengguna].JumlahStatus == 0 {
+		fmt.Println("Pengguna ini tidak memiliki status.")
 		return
 	}
 
-	fmt.Println("--- User's Statuses ---")
-	for i := 0; i < users[userIndex].StatusCount; i++ {
-		fmt.Printf("%d. %s\n", i+1, users[userIndex].Statuses[i])
+	// Menampilkan semua status pengguna yang ditemukan.
+	fmt.Println("--- Status Pengguna ---")
+	for i := 0; i < pengguna[indeksPengguna].JumlahStatus; i++ {
+		println(i+1, ".", pengguna[indeksPengguna].Status[i])
 	}
 
-	var statusIndex int
-	fmt.Print("Select a status number to comment on: ")
-	fmt.Scanln(&statusIndex)
+	// Meminta input nomor status yang ingin dikomentari.
+	var indeksStatus int
+	fmt.Print("Pilih nomor status untuk dikomentari: ")
+	fmt.Scanln(&indeksStatus)
 
-	if statusIndex < 1 || statusIndex > users[userIndex].StatusCount {
-		fmt.Println("Invalid status number.")
+	// Memeriksa validitas nomor status yang dipilih.
+	if indeksStatus < 1 || indeksStatus > pengguna[indeksPengguna].JumlahStatus {
+		fmt.Println("Nomor status tidak valid.")
 		return
 	}
 
-	fmt.Print("Enter your comment: ")
-	reader := bufio.NewReader(os.Stdin)
-	comment, _ := reader.ReadString('\n')
-	comment = strings.TrimSpace(comment)
+	// Meminta input komentar dari pengguna.
+	fmt.Print("Masukkan komentar Anda: ")
+	pembaca := bufio.NewScanner(os.Stdin)
+	pembaca.Scan()
+	komentar := pembaca.Text()
 
-	statusIndex-- // Convert to zero-based index
-	comments := &users[userIndex].Comments[statusIndex]
-	for i := 0; i < MAX_COMMENTS; i++ {
-		if (*comments)[i] == "" {
-			(*comments)[i] = fmt.Sprintf("%s: %s", users[loggedInIndex].Username, comment)
-			fmt.Println("Comment added!")
+	// Mengurangi indeksStatus untuk menyesuaikan dengan indeks berbasis nol.
+	indeksStatus--
+	// Menambahkan komentar ke status yang dipilih jika slot komentar masih tersedia.
+	for i := 0; i < MAKS_KOMENTAR; i++ {
+		if pengguna[indeksPengguna].Komentar[indeksStatus][i] == "" {
+			pengguna[indeksPengguna].Komentar[indeksStatus][i] = pengguna[indeksMasuk].NamaPengguna + ": " + strings.TrimSpace(komentar)
+			fmt.Println("Komentar ditambahkan!")
 			return
 		}
 	}
 
-	fmt.Println("Comments for this status are full.")
+	// Menampilkan pesan jika slot komentar sudah penuh.
+	fmt.Println("Komentar untuk status ini penuh.")
 }
 
-func viewHome() {
-	if loggedInIndex == -1 {
-		fmt.Println("Please login first.")
+// Fungsi untuk melihat dan mengurutkan daftar teman pengguna
+func lihatDanUrutkanTeman() {
+	// Memeriksa apakah pengguna sudah masuk
+	if indeksMasuk == -1 {
+		fmt.Println("Silakan masuk terlebih dahulu.")
 		return
 	}
 
-	fmt.Println("--- Home ---")
-	for i := 0; i < userCount; i++ {
-		fmt.Printf("%s:\n", users[i].Username)
-		for j := 0; j < users[i].StatusCount; j++ {
-			fmt.Printf("  - %s\n", users[i].Statuses[j])
-			for k := 0; k < MAX_COMMENTS; k++ {
-				if users[i].Comments[j][k] != "" {
-					fmt.Printf("    * %s\n", users[i].Comments[j][k])
+	// Mendapatkan jumlah teman dari pengguna yang masuk
+	jumlahTeman := pengguna[indeksMasuk].JumlahTeman
+	// Memeriksa apakah pengguna memiliki teman
+	if jumlahTeman == 0 {
+		fmt.Println("Anda tidak memiliki teman.")
+		return
+	}
+
+	// Meminta input urutan pengurutan dari pengguna
+	var urutan string
+	fmt.Print("Masukkan urutan pengurutan untuk teman (asc/desc): ")
+	fmt.Scanln(&urutan)
+
+	// Memeriksa validitas urutan pengurutan dan mengurutkan teman jika valid
+	if urutan == "asc" || urutan == "desc" {
+		teman := pengguna[indeksMasuk].Teman[:jumlahTeman]
+		insertionSortTeman(teman, jumlahTeman, urutan)
+		fmt.Println("Teman diurutkan!")
+	} else {
+		// Menampilkan pesan jika urutan pengurutan tidak valid
+		fmt.Println("Urutan pengurutan tidak valid. Menampilkan teman tanpa diurutkan.")
+	}
+
+	// Menampilkan daftar teman pengguna
+	fmt.Println("--- Teman Anda ---")
+	for i := 0; i < jumlahTeman; i++ {
+		fmt.Println(i+1, ". ", pengguna[indeksMasuk].Teman[i])
+	}
+}
+
+// Fungsi untuk mengurutkan pengguna menggunakan algoritma Selection Sort
+func urutkanPenggunaDenganSelectionSort() {
+	// Meminta input urutan pengurutan dari pengguna
+	var urutan string
+	fmt.Print("Masukkan urutan pengurutan (asc/desc): ")
+	fmt.Scanln(&urutan)
+
+	// Memeriksa validitas urutan pengurutan dan mengurutkan pengguna jika valid
+	if urutan == "asc" || urutan == "desc" {
+		selectionSortPenggunaByNamaPengguna(urutan)
+		fmt.Println("Pengguna berhasil diurutkan menggunakan Selection Sort!")
+	} else {
+		// Menampilkan pesan jika urutan pengurutan tidak valid
+		fmt.Println("Urutan pengurutan tidak valid. Silakan coba lagi.")
+	}
+}
+
+// Fungsi untuk melihat beranda
+func lihatBeranda() {
+	// Memeriksa apakah pengguna sudah masuk
+	if indeksMasuk == -1 {
+		fmt.Println("Silakan masuk terlebih dahulu.")
+		return
+	}
+
+	// Menampilkan header beranda
+	fmt.Println("--- Beranda ---")
+	// Loop melalui semua pengguna
+	for i := 0; i < jumlahPengguna; i++ {
+		// Menampilkan nama pengguna
+		fmt.Printf("%s:\n", pengguna[i].NamaPengguna)
+		// Loop melalui semua status pengguna
+		for j := 0; j < pengguna[i].JumlahStatus; j++ {
+			// Menampilkan status pengguna
+			fmt.Printf("  - %s\n", pengguna[i].Status[j])
+			// Loop melalui semua komentar pada status
+			for k := 0; k < MAKS_KOMENTAR; k++ {
+				// Memeriksa dan menampilkan komentar jika ada
+				if pengguna[i].Komentar[j][k] != "" {
+					fmt.Printf("    * %s\n", pengguna[i].Komentar[j][k])
 				}
 			}
 		}
 	}
 }
 
-// --- Edit, Search, and Delete Operations ---
-// Menggunakan algoritma sequential search untuk mencari pengguna atau mengedit data mereka.
-// Contoh: `searchUser` memungkinkan pengguna mencari profil berdasarkan username.
-func searchUser() {
-	if loggedInIndex == -1 {
-		fmt.Println("Please login first.")
+// Fungsi untuk melihat semua pengguna
+func lihatPengguna() {
+	// Meminta input urutan pengurutan dari pengguna
+	var urutan string
+	fmt.Print("Masukkan urutan pengurutan untuk pengguna (asc/desc): ")
+	fmt.Scanln(&urutan)
+
+	// Memeriksa validitas urutan pengurutan dan mengurutkan pengguna jika valid
+	if urutan == "asc" || urutan == "desc" {
+		selectionSortPenggunaByNamaPengguna(urutan)
+		fmt.Println("Pengguna diurutkan!")
+	} else {
+		// Menampilkan pesan jika urutan pengurutan tidak valid
+		fmt.Println("Urutan pengurutan tidak valid. Menampilkan pengguna tanpa diurutkan.")
+	}
+
+	// Menampilkan header daftar semua pengguna
+	fmt.Println("--- Semua Pengguna ---")
+	// Loop melalui semua pengguna
+	for i := 0; i < jumlahPengguna; i++ {
+		// Menampilkan nama pengguna
+		fmt.Printf("%d. %s\n", i+1, pengguna[i].NamaPengguna)
+	}
+}
+
+// --- Operasi Edit, Cari, dan Hapus ---
+// Menggunakan algoritma pencarian sequential untuk mencari pengguna atau mengedit data mereka.
+// Contoh: `cariPengguna` memungkinkan pengguna mencari profil berdasarkan nama pengguna.
+func cariPengguna() {
+	if indeksMasuk == -1 {
+		fmt.Println("Silakan masuk terlebih dahulu.")
 		return
 	}
 
-	// Input username untuk pencarian.
-	var username string
-	fmt.Print("Enter username to search: ")
-	fmt.Scanln(&username)
+	// Input nama pengguna untuk pencarian.
+	var namaPengguna string
+	fmt.Print("Masukkan nama pengguna untuk mencari: ")
+	fmt.Scanln(&namaPengguna)
 
-	// Menggunakan `findUserIndex` untuk menemukan data.
-	userIndex := findUserIndex(username)
-	if userIndex == -1 {
-		fmt.Println("User not found.")
+	// Menggunakan `cariIndeksPengguna` untuk menemukan data.
+	indeksPengguna := cariIndeksPengguna(namaPengguna)
+	if indeksPengguna == -1 {
+		fmt.Println("Pengguna tidak ditemukan.")
 		return
 	}
 
 	// Menampilkan data pengguna yang ditemukan.
-	fmt.Printf("--- User Profile ---\nUsername: %s\nProfile: %s\n", users[userIndex].Username, users[userIndex].Profile)
-	fmt.Println("Friends:")
-	for i := 0; i < users[userIndex].FriendCount; i++ {
-		fmt.Printf("  - %s\n", users[userIndex].Friends[i])
+	fmt.Println("--- Profil Pengguna ---")
+	fmt.Println("Nama Pengguna:", pengguna[indeksPengguna].NamaPengguna)
+	fmt.Println("Profil:", pengguna[indeksPengguna].Profil)
+	fmt.Println("Teman:")
+	for i := 0; i < pengguna[indeksPengguna].JumlahTeman; i++ {
+		fmt.Printf("  - %s\n", pengguna[indeksPengguna].Teman[i])
 	}
 }
 
-// --- Sorting Implementation ---
-// Selection sort sudah diimplementasikan di `selectionSortUsersByUsername`.
-// Untuk mendukung kebutuhan lain, algoritma insertion sort dapat ditambahkan.
+func tambahDataDummy() {
+	pengguna[0] = Pengguna{
+		NamaPengguna: "isfa",
+		KataSandi:    "kata123",
+		Profil:       "Halo, saya isfa",
+		Teman:        [MAKS_TEMAN]string{"nasrul", "adam", "rapi"},
+		JumlahTeman:  3,
+		JumlahStatus: 2,
+		Status:       [MAKS_STATUS]string{"Hari ini sangat menyenangkan!", "Coding itu seru!"},
+	}
+
+	pengguna[1] = Pengguna{
+		NamaPengguna: "nasrul",
+		KataSandi:    "sandiaman",
+		Profil:       "Hai, saya nasrul.",
+		Teman:        [MAKS_TEMAN]string{"isfa", "adam"},
+		JumlahTeman:  2,
+		JumlahStatus: 1,
+		Status:       [MAKS_STATUS]string{"Suka menjelajahi tempat baru."},
+	}
+
+	pengguna[2] = Pengguna{
+		NamaPengguna: "adam",
+		KataSandi:    "adam123",
+		Profil:       "Fotografer dan petualang.",
+		Teman:        [MAKS_TEMAN]string{"isfa", "nasrul", "soma"},
+		JumlahTeman:  3,
+		JumlahStatus: 3,
+		Status:       [MAKS_STATUS]string{"Alam itu indah!", "Baru saja memotret pemandangan menakjubkan!", "Hidup adalah petualangan."},
+	}
+
+	pengguna[3] = Pengguna{
+		NamaPengguna: "rapi",
+		KataSandi:    "rapi456",
+		Profil:       "Penggemar teknologi.",
+		Teman:        [MAKS_TEMAN]string{"isfa"},
+		JumlahTeman:  1,
+		JumlahStatus: 1,
+		Status:       [MAKS_STATUS]string{"Baru saja merakit PC baru!"},
+	}
+
+	pengguna[4] = Pengguna{
+		NamaPengguna: "soma",
+		KataSandi:    "soma123",
+		Profil:       "Suka mendaki dan aktivitas luar ruangan.",
+		Teman:        [MAKS_TEMAN]string{"adam"},
+		JumlahTeman:  1,
+		JumlahStatus: 2,
+		Status:       [MAKS_STATUS]string{"Menjelajahi pegunungan.", "Terapi alam!"},
+	}
+
+	pengguna[5] = Pengguna{
+		NamaPengguna: "nabila",
+		KataSandi:    "nabila789",
+		Profil:       "Pencinta makanan dan koki.",
+		Teman:        [MAKS_TEMAN]string{"bones"},
+		JumlahTeman:  1,
+		JumlahStatus: 1,
+		Status:       [MAKS_STATUS]string{"Memasak hidangan lezat hari ini."},
+	}
+
+	pengguna[6] = Pengguna{
+		NamaPengguna: "bones",
+		KataSandi:    "bones2023",
+		Profil:       "Pencinta buku dan penulis.",
+		Teman:        [MAKS_TEMAN]string{"nabila"},
+		JumlahTeman:  1,
+		JumlahStatus: 1,
+		Status:       [MAKS_STATUS]string{"Sedang membaca novel yang menarik."},
+	}
+
+	pengguna[7] = Pengguna{
+		NamaPengguna: "aldo",
+		KataSandi:    "aldo456",
+		Profil:       "Insinyur dan penggemar DIY.",
+		Teman:        [MAKS_TEMAN]string{"ario"},
+		JumlahTeman:  1,
+		JumlahStatus: 1,
+		Status:       [MAKS_STATUS]string{"Membangun sesuatu yang keren!"},
+	}
+
+	pengguna[8] = Pengguna{
+		NamaPengguna: "ario",
+		KataSandi:    "ario987",
+		Profil:       "Pencinta kebugaran dan gym.",
+		Teman:        [MAKS_TEMAN]string{"aldo"},
+		JumlahTeman:  1,
+		JumlahStatus: 2,
+		Status:       [MAKS_STATUS]string{"Sesi gym selesai!", "Hari ini merasa kuat."},
+	}
+
+	pengguna[9] = Pengguna{
+		NamaPengguna: "naufal",
+		KataSandi:    "naufal123",
+		Profil:       "Musisi dan seniman.",
+		Teman:        [MAKS_TEMAN]string{},
+		JumlahTeman:  0,
+		JumlahStatus: 2,
+		Status:       [MAKS_STATUS]string{"Berlatih keterampilan gitar.", "Musik adalah hidup."},
+	}
+
+	jumlahPengguna = 10
+	fmt.Println("Data dummy berhasil ditambahkan!")
+}
+
+// Fungsi untuk menghapus status pengguna
+// Parameter:
+// - namaPengguna: string yang berisi nama pengguna yang ingin menghapus status.
+// - indeksStatus: integer yang menunjukkan indeks status yang ingin dihapus.
+func hapusStatus() {
+	// Meminta input untuk parameter yang diperlukan
+	var namaPengguna string
+	var indeksStatus int
+	fmt.Print("Masukkan nama pengguna: ")
+	fmt.Scanln(&namaPengguna)
+	fmt.Print("Masukkan indeks status: ")
+	fmt.Scanln(&indeksStatus)
+
+	// Mencari indeks pengguna berdasarkan nama pengguna
+	indeks := cariIndeksPengguna(namaPengguna)
+	if indeks == -1 {
+		fmt.Println("Pengguna tidak ditemukan.")
+		return
+	}
+
+	// Memeriksa apakah indeks status valid
+	if indeksStatus < 0 || indeksStatus >= pengguna[indeks].JumlahStatus {
+		fmt.Println("Indeks status tidak valid.")
+		return
+	}
+
+	// Menggeser status ke kiri untuk menghapus status pada indeks yang diberikan
+	for i := indeksStatus; i < pengguna[indeks].JumlahStatus-1; i++ {
+		pengguna[indeks].Status[i] = pengguna[indeks].Status[i+1]
+	}
+	// Mengosongkan status terakhir setelah penggeseran
+	pengguna[indeks].Status[pengguna[indeks].JumlahStatus-1] = ""
+	// Mengurangi jumlah status pengguna
+	pengguna[indeks].JumlahStatus--
+
+	fmt.Println("Status berhasil dihapus.")
+}
+
+// Fungsi `postStatus` digunakan untuk mengunggah status baru oleh pengguna yang sedang masuk.
+func postStatus() {
+	// Memeriksa apakah ada pengguna yang sudah masuk.
+	if indeksMasuk == -1 {
+		fmt.Println("Silakan masuk terlebih dahulu.")
+		return
+	}
+
+	// Memeriksa apakah daftar status sudah penuh.
+	if pengguna[indeksMasuk].JumlahStatus >= MAKS_STATUS {
+		fmt.Println("Daftar status penuh.")
+		return
+	}
+
+	// Meminta input status baru dari pengguna.
+	fmt.Print("Masukkan status Anda: ")
+	pembaca := bufio.NewReader(os.Stdin)
+	status, err := pembaca.ReadString('\n')
+	if err != nil {
+		// Menangani kesalahan saat membaca input.
+		fmt.Println("Terjadi kesalahan saat membaca input.")
+		return
+	}
+	// Menyimpan status baru ke dalam array status pengguna yang sedang masuk.
+	pengguna[indeksMasuk].Status[pengguna[indeksMasuk].JumlahStatus] = strings.TrimSpace(status)
+	// Menambah jumlah status pengguna.
+	pengguna[indeksMasuk].JumlahStatus++
+	fmt.Println("Status berhasil diunggah!")
+}
+
+// Fungsi untuk mengedit status pengguna
+// Parameter:
+// - namaPengguna: string yang berisi nama pengguna yang ingin mengedit status.
+// - indeksStatus: integer yang menunjukkan indeks status yang ingin diedit.
+// - statusBaru: string yang berisi status baru yang akan menggantikan status lama.
+func editStatus() {
+	// Meminta input untuk parameter yang diperlukan
+	var namaPengguna string
+	var indeksStatus int
+	var statusBaru string
+	fmt.Print("Masukkan nama pengguna: ")
+	fmt.Scanln(&namaPengguna)
+	fmt.Print("Masukkan indeks status: ")
+	fmt.Scanln(&indeksStatus)
+	fmt.Print("Masukkan status baru: ")
+	fmt.Scanln(&statusBaru)
+
+	// Mencari indeks pengguna berdasarkan nama pengguna
+	indeks := cariIndeksPengguna(namaPengguna)
+	if indeks == -1 {
+		fmt.Println("Pengguna tidak ditemukan.")
+		return
+	}
+
+	// Memeriksa apakah indeks status valid
+	if indeksStatus < 0 || indeksStatus >= pengguna[indeks].JumlahStatus {
+		fmt.Println("Indeks status tidak valid.")
+		return
+	}
+
+	// Memperbarui status pada indeks yang diberikan dengan status baru
+	pengguna[indeks].Status[indeksStatus] = statusBaru
+	fmt.Println("Status berhasil diperbarui.")
+}
+
+// Fungsi untuk mengedit komentar pada status pengguna
+// Parameter:
+// - namaPengguna: string yang berisi nama pengguna yang ingin mengedit komentar.
+// - indeksStatus: integer yang menunjukkan indeks status yang ingin dikomentari.
+// - indeksKomentar: integer yang menunjukkan indeks komentar yang ingin diedit.
+// - komentarBaru: string yang berisi komentar baru yang akan menggantikan komentar lama.
+func editKomentar() {
+	// Meminta input untuk parameter yang diperlukan
+	var namaPengguna string
+	var indeksStatus int
+	var indeksKomentar int
+	var komentarBaru string
+	fmt.Print("Masukkan nama pengguna: ")
+	fmt.Scanln(&namaPengguna)
+	fmt.Print("Masukkan indeks status: ")
+	fmt.Scanln(&indeksStatus)
+	fmt.Print("Masukkan indeks komentar: ")
+	fmt.Scanln(&indeksKomentar)
+	fmt.Print("Masukkan komentar baru: ")
+	fmt.Scanln(&komentarBaru)
+
+	// Mencari indeks pengguna berdasarkan nama pengguna
+	indeks := cariIndeksPengguna(namaPengguna)
+	if indeks == -1 {
+		fmt.Println("Pengguna tidak ditemukan.")
+		return
+	}
+
+	// Memeriksa apakah indeks status dan indeks komentar valid
+	if indeksStatus < 0 || indeksStatus >= pengguna[indeks].JumlahStatus {
+		fmt.Println("Indeks status tidak valid.")
+		return
+	}
+	if indeksKomentar < 0 || indeksKomentar >= MAKS_KOMENTAR || pengguna[indeks].Komentar[indeksStatus][indeksKomentar] == "" {
+		fmt.Println("Indeks komentar tidak valid.")
+		return
+	}
+
+	// Memperbarui komentar pada indeks yang diberikan dengan komentar baru
+	pengguna[indeks].Komentar[indeksStatus][indeksKomentar] = komentarBaru
+	fmt.Println("Komentar berhasil diperbarui.")
+}
+
+// Fungsi untuk menghapus komentar pada status pengguna
+// Parameter:
+// - namaPengguna: string yang berisi nama pengguna yang ingin menghapus komentar.
+// - indeksStatus: integer yang menunjukkan indeks status yang ingin dikomentari.
+// - indeksKomentar: integer yang menunjukkan indeks komentar yang ingin dihapus.
+func hapusKomentar() {
+	// Meminta input untuk parameter yang diperlukan
+	var namaPengguna string
+	var indeksStatus int
+	var indeksKomentar int
+	fmt.Print("Masukkan nama pengguna: ")
+	fmt.Scanln(&namaPengguna)
+	fmt.Print("Masukkan indeks status: ")
+	fmt.Scanln(&indeksStatus)
+	fmt.Print("Masukkan indeks komentar: ")
+	fmt.Scanln(&indeksKomentar)
+
+	// Mencari indeks pengguna berdasarkan nama pengguna
+	indeks := cariIndeksPengguna(namaPengguna)
+	if indeks == -1 {
+		fmt.Println("Pengguna tidak ditemukan.")
+		return
+	}
+
+	// Memeriksa apakah indeks status dan indeks komentar valid
+	if indeksStatus < 0 || indeksStatus >= pengguna[indeks].JumlahStatus {
+		fmt.Println("Indeks status tidak valid.")
+		return
+	}
+	if indeksKomentar < 0 || indeksKomentar >= MAKS_KOMENTAR || pengguna[indeks].Komentar[indeksStatus][indeksKomentar] == "" {
+		fmt.Println("Indeks komentar tidak valid.")
+		return
+	}
+
+	// Menggeser komentar ke kiri untuk menghapus komentar pada indeks yang diberikan
+	for i := indeksKomentar; i < MAKS_KOMENTAR-1; i++ {
+		pengguna[indeks].Komentar[indeksStatus][i] = pengguna[indeks].Komentar[indeksStatus][i+1]
+	}
+	// Mengosongkan komentar terakhir setelah penggeseran
+	pengguna[indeks].Komentar[indeksStatus][MAKS_KOMENTAR-1] = ""
+
+	fmt.Println("Komentar berhasil dihapus.")
+}
 
 // --- Menu ---
 // Mengintegrasikan semua fitur melalui menu utama yang modular.
 // Setiap pilihan menu memanggil subprogram terkait.
 func menu() {
 	for {
-		fmt.Println("\n--- Social Media App ---")
-		fmt.Println("1. Register")
-		fmt.Println("2. Login")
-		fmt.Println("3. Logout")
-		fmt.Println("4. Update Profile")
-		fmt.Println("5. Add Friend")
-		fmt.Println("6. Post Status")
-		fmt.Println("7. View Home")
-		fmt.Println("8. Comment on Status")
-		fmt.Println("9. Search User")
-		fmt.Println("10. Exit")
-		fmt.Print("Choose an option: ")
+		fmt.Println("\n--- Aplikasi Media Sosial ---")
+		fmt.Println("1. Daftar")
+		fmt.Println("2. Masuk")
+		fmt.Println("3. logout")
+		fmt.Println("4. Perbarui Profil")
+		fmt.Println("5. Tambah Teman")
+		fmt.Println("6. Hapus Teman")
+		fmt.Println("7. Posting Status")
+		fmt.Println("8. Edit Status")
+		fmt.Println("9. Hapus Status")
+		fmt.Println("10. Cari Pengguna")
+		fmt.Println("11. Lihat dan Urutkan Pengguna")
+		fmt.Println("12. Lihat dan Urutkan Teman")
+		fmt.Println("13. Komentar pada Status")
+		fmt.Println("14. Edit Komentar")
+		fmt.Println("15. Hapus Komentar")
+		fmt.Println("16. Lihat Beranda")
+		fmt.Println("17. Keluar")
+		fmt.Print("Pilih opsi: ")
 
-		var choice int
-		fmt.Scanln(&choice)
+		var pilihan int
+		fmt.Scanln(&pilihan)
 
-		// Memanggil subprogram sesuai pilihan.
-		switch choice {
+		switch pilihan {
 		case 1:
-			register()
+			daftar() // Create
 		case 2:
-			loginHandler()
+			handlerMasuk()
 		case 3:
-			logout()
+			keluar()
 		case 4:
-			updateProfile()
+			perbaruiProfil() // Update
 		case 5:
-			addFriend()
+			tambahTeman() // Update
 		case 6:
-			postStatus()
+			hapusTeman() // Delete
 		case 7:
-			viewHome()
+			postStatus() // Create
 		case 8:
-			commentOnStatus()
+			editStatus() // Update
 		case 9:
-			searchUser()
+			hapusStatus() // Delete
 		case 10:
-			fmt.Println("Exiting...")
+			cariPengguna() // Read
+		case 11:
+			lihatPengguna() // Read
+		case 12:
+			lihatDanUrutkanTeman() // Read
+		case 13:
+			komentarPadaStatus() // Create
+		case 14:
+			editKomentar() // Update
+		case 15:
+			hapusKomentar() // Delete
+		case 16:
+			lihatBeranda() // Read
+		case 17:
+			fmt.Println("Keluar...")
 			return
 		default:
-			fmt.Println("Invalid option. Please try again.")
+			fmt.Println("Opsi tidak valid. Silakan coba lagi.")
 		}
 	}
 }
 
-// --- Main Function ---
-// Fungsi utama hanya memanggil menu utama.
 func main() {
+	tambahDataDummy()
 	menu()
 }

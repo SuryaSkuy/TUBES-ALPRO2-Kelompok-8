@@ -379,10 +379,18 @@ func lihatDanUrutkanTeman() {
 		fmt.Println("Urutan pengurutan tidak valid. Menampilkan teman tanpa diurutkan.")
 	}
 
-	// Menampilkan daftar teman pengguna
-	fmt.Println("--- Teman Anda ---")
+	// Menampilkan daftar teman pengguna dengan detail
+	println("--- Teman Anda ---")
 	for i := 0; i < jumlahTeman; i++ {
-		fmt.Println(i+1, ". ", pengguna[indeksMasuk].Teman[i])
+		namaTeman := pengguna[indeksMasuk].Teman[i]
+		indeksTeman := cariIndeksPengguna(namaTeman)
+		if indeksTeman != -1 {
+			profilTeman := pengguna[indeksTeman].Profil
+			jumlahTemanTeman := pengguna[indeksTeman].JumlahTeman
+			println(i+1, ". Nama: ", namaTeman, ", Profil: ", profilTeman, ", Jumlah Teman: ", jumlahTemanTeman)
+		} else {
+			println(i+1, ". Nama: ", namaTeman)
+		}
 	}
 }
 

@@ -24,7 +24,6 @@ type Pengguna struct {
 	Komentar     [MAKS_STATUS][MAKS_KOMENTAR]string
 	JumlahTeman  int
 	JumlahStatus int
-	
 }
 
 var pengguna [MAKS_PENGGUNA]Pengguna
@@ -259,11 +258,12 @@ func hapusTeman() {
 
 	// Mencari indeks teman dalam daftar teman pengguna yang sedang masuk.
 	indeksTeman := -1
-	for i := 0; i < pengguna[indeksMasuk].JumlahTeman; i++ {
+	i := 0
+	for i < pengguna[indeksMasuk].JumlahTeman && indeksTeman == -1 {
 		if pengguna[indeksMasuk].Teman[i] == namaTeman {
 			indeksTeman = i
-			break
 		}
+		i++
 	}
 
 	// Memeriksa apakah teman ditemukan dalam daftar teman.
@@ -688,13 +688,12 @@ func cariStatusBinarySearch() {
 	// Melakukan binary search untuk mencari status yang mengandung kata kunci
 	low, high := 0, pengguna[indeks].JumlahStatus-1
 	statusDitemukan := false
-	for low <= high {
+	for low <= high && !statusDitemukan {
 		mid := (low + high) / 2
 		if strings.Contains(pengguna[indeks].Status[mid], kataKunci) {
 			fmt.Printf("Status ditemukan pada indeks %d: %s\n", mid, pengguna[indeks].Status[mid])
 			statusDitemukan = true
 			fmt.Println("Status:", pengguna[indeks].Status[mid]) // Menampilkan status setelah ditemukan
-			break
 		} else if pengguna[indeks].Status[mid] < kataKunci {
 			low = mid + 1
 		} else {
@@ -706,8 +705,6 @@ func cariStatusBinarySearch() {
 		fmt.Println("Tidak ada status yang mengandung kata kunci tersebut.")
 	}
 }
-
-
 
 // Fungsi untuk mengedit status pengguna
 // Parameter:
@@ -895,7 +892,7 @@ func menu() {
 			lihatBeranda() // Read
 		case 17:
 			cariStatusBinarySearch() //Read
-		case 18: 
+		case 18:
 			fmt.Println("Keluar...")
 			return
 		default:
